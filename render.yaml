@@ -1,0 +1,34 @@
+# Render Blueprint: deploys the Express API and the Python face service.
+# The React frontend is deployed separately on Vercel (see vercel.json).
+services:
+  - type: web
+    name: smart-attendance-api
+    runtime: node
+    rootDir: server
+    plan: free
+    buildCommand: npm install --include=dev && npm run build
+    startCommand: npm start
+    healthCheckPath: /api/health
+    envVars:
+      - key: NODE_VERSION
+        value: 20
+      - key: JWT_SECRET
+        generateValue: true
+      - key: ALLOW_PRIVILEGED_SIGNUP
+        value: "false"
+      - key: MONGODB_URI
+        sync: false
+      - key: PYTHON_API_URL
+        sync: false   # e.g. https://smart-attendance-cv-service.onrender.com
+
+  - type: web
+    name: smart-attendance-cv-service
+    runtime: python
+    rootDir: python-service
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn app:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /health
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.8
