@@ -15,7 +15,7 @@ services:
       - key: JWT_SECRET
         generateValue: true
       - key: ALLOW_PRIVILEGED_SIGNUP
-        value: "false"
+        value: "true"
       - key: MONGODB_URI
         sync: false
       - key: PYTHON_API_URL

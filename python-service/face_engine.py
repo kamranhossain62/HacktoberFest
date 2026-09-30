@@ -8,8 +8,13 @@ from typing import List, Dict, Tuple, Optional
 class FaceBiometricEngine:
     def __init__(self):
         # Load OpenCV Haar Cascade model for face detection
-        cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
-        self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        self.face_cascade = None
+        try:
+            if hasattr(cv2, 'CascadeClassifier') and hasattr(cv2, 'data') and hasattr(cv2.data, 'haarcascades'):
+                cascade_path = cv2.data.haarcascades + 'haarcascade_frontalface_default.xml'
+                self.face_cascade = cv2.CascadeClassifier(cascade_path)
+        except Exception as err:
+            print(f"Warning: OpenCV CascadeClassifier not initialized: {err}")
         
         # In-memory student embedding registry
         # student_id -> list of float embeddings
@@ -36,18 +41,21 @@ class FaceBiometricEngine:
         Enhances low-light classroom images using CLAHE
         (Contrast Limited Adaptive Histogram Equalization) on the luminance channel.
         """
-        # Convert BGR to LAB color space
-        lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
-        l, a, b = cv2.split(lab)
-        
-        # Apply CLAHE to L-channel
-        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
-        cl = clahe.apply(l)
-        
-        # Merge channels and convert back to BGR
-        limg = cv2.merge((cl, a, b))
-        enhanced_bgr = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
-        return enhanced_bgr
+        try:
+            # Convert BGR to LAB color space
+            lab = cv2.cvtColor(img_bgr, cv2.COLOR_BGR2LAB)
+            l, a, b = cv2.split(lab)
+            
+            # Apply CLAHE to L-channel
+            clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+            cl = clahe.apply(l)
+            
+            # Merge channels and convert back to BGR
+            limg = cv2.merge((cl, a, b))
+            enhanced_bgr = cv2.cvtColor(limg, cv2.COLOR_LAB2BGR)
+            return enhanced_bgr
+        except Exception:
+            return img_bgr
 
     def extract_face_embedding(self, face_chip: np.ndarray) -> np.ndarray:
         """
@@ -83,7 +91,12 @@ class FaceBiometricEngine:
         enhanced = self.enhance_low_light_clahe(img)
         gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
         
-        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+        faces = ()
+        if self.face_cascade is not None:
+            try:
+                faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=4, minSize=(40, 40))
+            except Exception:
+                faces = ()
         
         if len(faces) == 0:
             # Fallback to full image center crop if cascade misses
@@ -111,7 +124,12 @@ class FaceBiometricEngine:
         enhanced = self.enhance_low_light_clahe(img)
         gray = cv2.cvtColor(enhanced, cv2.COLOR_BGR2GRAY)
         
-        faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(35, 35))
+        faces = ()
+        if self.face_cascade is not None:
+            try:
+                faces = self.face_cascade.detectMultiScale(gray, scaleFactor=1.1, minNeighbors=3, minSize=(35, 35))
+            except Exception:
+                faces = ()
         
         matches = []
         
